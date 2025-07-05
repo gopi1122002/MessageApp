@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "282363223878",
+    "project_id": "useradmin-dcc9a",
+    "storage_bucket": "useradmin-dcc9a.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:282363223878:android:e047a35d895df19bc18f47",
+        "android_client_info": {
+          "package_name": "com.example.message"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyDqi2eMAL4y41pWq3jtKY-klJIDbqy_tes"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
