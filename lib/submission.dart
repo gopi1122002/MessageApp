@@ -1,8 +1,11 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';  // for Clipboard
 import 'package:url_launcher/url_launcher.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
 
 class SubmissionTile extends StatefulWidget {
   final String docId;
+  final String username;
   final String content;
   final String status;
   final VoidCallback onAccept;
@@ -11,6 +14,7 @@ class SubmissionTile extends StatefulWidget {
 
   const SubmissionTile({
     required this.docId,
+    required this.username,
     required this.content,
     required this.status,
     required this.onAccept,
@@ -26,14 +30,29 @@ class SubmissionTile extends StatefulWidget {
 class _SubmissionTileState extends State<SubmissionTile> {
   bool _isDialogOpen = false;
 
-  Future<void> _openWhatsAppGroup() async {
-    final Uri url = Uri.parse('https://chat.whatsapp.com/EhOeBRYj0VTKIfIvzRR5pj?mode=r_t');
+  Future<void> _openWhatsAppGroupAndCopyMessage(String message) async {
+    final Uri whatsappGroupUrl = Uri.parse("https://chat.whatsapp.com/EhOeBRYj0VTKIfIvzRR5pj");
 
-    if (!await launchUrl(url, mode: LaunchMode.externalApplication)) {
+    // Copy the message text to clipboard
+    await Clipboard.setData(ClipboardData(text: message));
+
+    // Try to launch the WhatsApp group link
+    if (!await launchUrl(whatsappGroupUrl, mode: LaunchMode.externalApplication)) {
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Could not open WhatsApp group')),
+        SnackBar(content: Text('Could not open WhatsApp group link')),
       );
+      return;
     }
+
+    // Show snackbar telling user message copied
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(
+          'Message copied to clipboard.',
+          maxLines: 2,
+        ),
+      ),
+    );
   }
 
   void _showPopupDialog() async {
@@ -90,43 +109,62 @@ class _SubmissionTileState extends State<SubmissionTile> {
           ),
         ),
         actions: [
-          ElevatedButton.icon(
-            icon: Icon(Icons.check, color: Colors.white),
-            label: Text('Accept', style: TextStyle(color: Colors.white)),
-            style: ElevatedButton.styleFrom(backgroundColor: Colors.green),
-            onPressed: () async {
-              Navigator.pop(context);
-              widget.onAccept();
-              await _openWhatsAppGroup();
-            },
-          ),
-          ElevatedButton.icon(
-            icon: Icon(Icons.close, color: Colors.white),
-            label: Text('Reject', style: TextStyle(color: Colors.white)),
-            style: ElevatedButton.styleFrom(backgroundColor: Colors.red),
-            onPressed: () {
-              Navigator.pop(context);
-              widget.onReject();
-            },
-          ),
+          if (widget.status == 'pending') ...[
+            ElevatedButton.icon(
+              icon: Icon(Icons.check, color: Colors.white),
+              label: Text('Accept', style: TextStyle(color: Colors.white)),
+              style: ElevatedButton.styleFrom(backgroundColor: Colors.green),
+              onPressed: () async {
+                Navigator.pop(context);
+                widget.onAccept();
+                await _openWhatsAppGroupAndCopyMessage(widget.content);
+              },
+            ),
+            ElevatedButton.icon(
+              icon: Icon(Icons.close, color: Colors.white),
+              label: Text('Reject', style: TextStyle(color: Colors.white)),
+              style: ElevatedButton.styleFrom(backgroundColor: Colors.red),
+              onPressed: () {
+                Navigator.pop(context);
+                widget.onReject();
+              },
+            ),
+          ]
         ],
+
       ),
     );
 
-    // Reset icon after dialog is closed
     setState(() {
       _isDialogOpen = false;
     });
   }
 
   @override
+  @override
   Widget build(BuildContext context) {
     return Card(
       margin: EdgeInsets.symmetric(horizontal: 10, vertical: 10),
       child: ListTile(
-        title: Text(
-          '••••••••••••••',
-          style: TextStyle(fontFamily: 'monospace'),
+        title: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              widget.username,
+              style: TextStyle(
+                fontWeight: FontWeight.bold,
+                fontSize: 16,
+                color: Colors.black,
+              ),
+            ),
+            SizedBox(height: 4),
+            Text(
+              widget.content.length > 15
+                  ? '${widget.content.substring(0, 15)}...'
+                  : widget.content,
+              style: TextStyle(fontFamily: 'monospace'),
+            ),
+          ],
         ),
         subtitle: RichText(
           text: TextSpan(
@@ -172,15 +210,19 @@ class _SubmissionTileState extends State<SubmissionTile> {
                 final confirm = await showDialog<bool>(
                   context: context,
                   builder: (context) => AlertDialog(
-                    title: Text('Delete Submission'),
+                    title: Text('Delete Submission', style: TextStyle(color: Colors.blue)),
                     content: Text('Are you sure you want to delete this submission?'),
                     actions: [
                       TextButton(
                         onPressed: () => Navigator.pop(context, false),
-                        child: Text('Cancel'),
+                        child: Text('Cancel', style: TextStyle(color: Colors.black)),
                       ),
                       ElevatedButton(
                         onPressed: () => Navigator.pop(context, true),
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: Colors.white,
+                          foregroundColor: Colors.redAccent,
+                        ),
                         child: Text('Delete'),
                       ),
                     ],
@@ -188,13 +230,31 @@ class _SubmissionTileState extends State<SubmissionTile> {
                 );
 
                 if (confirm == true) {
-                  widget.onDelete();
+                  try {
+                    await FirebaseFirestore.instance
+                        .collection('submissions')
+                        .doc(widget.docId)
+                        .delete();
+
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      SnackBar(content: Text('Submission deleted')),
+                    );
+
+                    // Optional callback to parent
+                    widget.onDelete();
+                  } catch (e) {
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      SnackBar(content: Text('Failed to delete: $e')),
+                    );
+                  }
                 }
               },
             ),
+
           ],
         ),
       ),
     );
   }
+
 }

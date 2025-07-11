@@ -1,10 +1,17 @@
 import 'package:flutter/material.dart';
-// Import your screens
+import 'package:firebase_core/firebase_core.dart';
+import 'firebase_options.dart';
 import 'auth_screen.dart';
 import 'admin.dart';
 import 'user.dart';
 
-void main() {
+void main() async {
+  WidgetsFlutterBinding.ensureInitialized();
+  if (Firebase.apps.isEmpty) {
+    await Firebase.initializeApp(
+      options: DefaultFirebaseOptions.currentPlatform,
+    );
+  }
   runApp(MyApp());
 }
 
@@ -12,15 +19,16 @@ class MyApp extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
-      title: 'MessageApp',
-      theme: ThemeData(primarySwatch: Colors.blue),
       debugShowCheckedModeBanner: false,
-      initialRoute: '/', // Start at login
+      title: 'Message App',
+      theme: ThemeData(
+        primarySwatch: Colors.blue,
+      ),
+      home: AuthScreen(),
       routes: {
-        '/': (context) => AuthScreen(),
+        '/login': (context) => AuthScreen(),
         '/admin': (context) => AdminScreen(),
-        '/user': (context) => UserScreen(), // create this if you haven't yet
-        '/login': (context) => AuthScreen(), // alias if you want
+        '/user': (context) => UserScreen(),
       },
     );
   }

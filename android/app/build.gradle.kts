@@ -1,10 +1,7 @@
 plugins {
     id("com.android.application")
-    // START: FlutterFire Configuration
     id("com.google.gms.google-services")
-    // END: FlutterFire Configuration
     id("kotlin-android")
-    // The Flutter Gradle Plugin must be applied after the Android and Kotlin Gradle plugins.
     id("dev.flutter.flutter-gradle-plugin")
 }
 
@@ -12,6 +9,15 @@ android {
     namespace = "com.example.message"
     compileSdk = flutter.compileSdkVersion
     ndkVersion = "27.0.12077973"
+
+    defaultConfig {
+        applicationId = "com.example.message"
+        minSdk = 23
+        targetSdk = flutter.targetSdkVersion
+        versionCode = flutter.versionCode
+        versionName = flutter.versionName
+
+    }
 
     compileOptions {
         sourceCompatibility = JavaVersion.VERSION_11
@@ -22,21 +28,9 @@ android {
         jvmTarget = JavaVersion.VERSION_11.toString()
     }
 
-    defaultConfig {
-        applicationId = "com.example.message"
-
-        // ✅ Updated to support Firebase Auth which requires minSdk 23
-        minSdk = 23
-
-        targetSdk = flutter.targetSdkVersion
-        versionCode = flutter.versionCode
-        versionName = flutter.versionName
-    }
-
     buildTypes {
         release {
-            // TODO: Add your own signing config for the release build.
-            // Signing with the debug keys for now, so `flutter run --release` works.
+
             signingConfig = signingConfigs.getByName("debug")
         }
     }
@@ -44,4 +38,15 @@ android {
 
 flutter {
     source = "../.."
+}
+
+dependencies {
+//    implementation ("com.google.android.gms:play-services-integrity:17.0.0")
+    implementation("androidx.multidex:multidex:2.0.1")
+    implementation("com.google.android.gms:play-services-base:18.6.0") // Keep or update to latest
+//    implementation("com.google.android.gms:play-services-safetynet:18.1.0")
+    implementation(platform("com.google.firebase:firebase-bom:32.8.0"))// Keep or update
+    implementation("com.google.firebase:firebase-auth:23.0.0")
+    implementation("com.google.firebase:firebase-analytics:22.5.0")
+    implementation("com.google.firebase:firebase-firestore:25.0.0") // Add for cloud_firestore
 }

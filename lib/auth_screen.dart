@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:flutter/gestures.dart';
+import 'register.dart';
 
 class AuthScreen extends StatefulWidget {
   @override
@@ -11,6 +13,7 @@ class _AuthScreenState extends State<AuthScreen> {
   final _formKey = GlobalKey<FormState>();
   final _mobileController = TextEditingController();
   final _passwordController = TextEditingController();
+  final _usernameController = TextEditingController();
 
   bool _isLogin = true;
   bool _isLoading = false;
@@ -19,13 +22,13 @@ class _AuthScreenState extends State<AuthScreen> {
   void _showMessage(String msg) {
     ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(msg)));
   }
-
   Future<void> _authenticate() async {
     if (!_formKey.currentState!.validate()) return;
 
     setState(() => _isLoading = true);
     final mobile = _mobileController.text.trim();
     final password = _passwordController.text.trim();
+    final username = _usernameController.text.trim(); // ✅ Make sure this controller exists
     final email = '$mobile@domain.com';
 
     try {
@@ -35,11 +38,13 @@ class _AuthScreenState extends State<AuthScreen> {
           email: email,
           password: password,
         );
+        print('User logged in: ${credential.user!.uid}');
       } else {
         credential = await FirebaseAuth.instance.createUserWithEmailAndPassword(
           email: email,
           password: password,
         );
+
         await FirebaseFirestore.instance
             .collection('users')
             .doc(credential.user!.uid)
@@ -47,6 +52,7 @@ class _AuthScreenState extends State<AuthScreen> {
           'uid': credential.user!.uid,
           'mobile': mobile,
           'email': email,
+          'username': username, // ✅ Save username at registration
           'isAdmin': mobile == '1234567890',
           'timestamp': Timestamp.now(),
         });
@@ -57,10 +63,12 @@ class _AuthScreenState extends State<AuthScreen> {
       var doc = await docRef.get();
 
       if (!doc.exists) {
+        //  Always include username
         await docRef.set({
           'uid': credential.user!.uid,
           'mobile': mobile,
           'email': email,
+          'username': username, // Fix here
           'isAdmin': mobile == '1234567890',
           'timestamp': Timestamp.now(),
         });
@@ -68,6 +76,8 @@ class _AuthScreenState extends State<AuthScreen> {
       }
 
       final data = doc.data()!;
+      print('Firestore User Data: $data');
+
       if (data.containsKey('isAdmin') && data['isAdmin'] == true) {
         Navigator.pushReplacementNamed(context, '/admin');
       } else {
@@ -84,10 +94,12 @@ class _AuthScreenState extends State<AuthScreen> {
     }
   }
 
+
   @override
   void dispose() {
     _mobileController.dispose();
     _passwordController.dispose();
+    _usernameController.dispose();
     super.dispose();
   }
 
@@ -114,7 +126,7 @@ class _AuthScreenState extends State<AuthScreen> {
               borderRadius: BorderRadius.circular(16),
               boxShadow: [
                 BoxShadow(
-                  color: Colors.black12,
+                  color: Colors.grey,
                   blurRadius: 12,
                   offset: Offset(0, 6),
                 ),
@@ -122,112 +134,145 @@ class _AuthScreenState extends State<AuthScreen> {
             ),
             child: Form(
               key: _formKey,
+              autovalidateMode: AutovalidateMode.disabled, // Show error only after user types
               child: Column(
                 mainAxisSize: MainAxisSize.min,
                 children: [
+                  // Mobile Number Field
                   TextFormField(
+
+                    cursorColor: Colors.grey[600],
                     controller: _mobileController,
+                    keyboardType: TextInputType.phone,
                     decoration: InputDecoration(
                       labelText: 'Mobile Number',
-                      labelStyle: TextStyle(color: Colors.black),
-                      floatingLabelStyle: TextStyle(color: Colors.black),
-                      prefixIcon: Icon(Icons.phone_android, color: Colors.black),
+                      labelStyle: TextStyle(color: Colors.grey),
+                      floatingLabelStyle: TextStyle(color: Colors.blue),
+                      prefixIcon: Icon(Icons.phone_android, color: Colors.black45),
                       enabledBorder: OutlineInputBorder(
                         borderRadius: BorderRadius.circular(12),
-                        borderSide: BorderSide(color: Colors.black),
+                        borderSide: BorderSide(color: Colors.grey),
                       ),
                       focusedBorder: OutlineInputBorder(
                         borderRadius: BorderRadius.circular(12),
-                        borderSide: BorderSide(color: Colors.black, width: 2),
+                        borderSide: BorderSide(color: Colors.grey, width: 2),
                       ),
                       errorBorder: OutlineInputBorder(
                         borderRadius: BorderRadius.circular(12),
-                        borderSide: BorderSide(color: Colors.black),
+                        borderSide: BorderSide(color: Colors.red),
                       ),
                       focusedErrorBorder: OutlineInputBorder(
                         borderRadius: BorderRadius.circular(12),
-                        borderSide: BorderSide(color: Colors.black, width: 2),
+                        borderSide: BorderSide(color: Colors.red, width: 2),
                       ),
                     ),
-                    keyboardType: TextInputType.phone,
-                    validator: (value) =>
-                    value == null || value.isEmpty ? 'Enter mobile' : null,
+                    validator: (value) {
+                      if (value == null || value.isEmpty) {
+                        return 'Enter mobile number';
+                      } else if (!RegExp(r'^\d{10}$').hasMatch(value)) {
+                        return 'Mobile number must be 10 digits';
+                      }
+                      return null;
+                    },
                   ),
                   SizedBox(height: 16),
+
+                  // Password Field
                   TextFormField(
+                    cursorColor: Colors.grey[600],
                     controller: _passwordController,
                     obscureText: !_showPassword,
                     decoration: InputDecoration(
                       labelText: 'Password',
-                      labelStyle: TextStyle(color: Colors.black),
-                      floatingLabelStyle: TextStyle(color: Colors.black),
-                      prefixIcon: Icon(Icons.lock, color: Colors.black),
+                      labelStyle: TextStyle(color: Colors.grey),
+                      floatingLabelStyle: TextStyle(color: Colors.blue),
+                      prefixIcon: Icon(Icons.lock, color: Colors.black45),
                       enabledBorder: OutlineInputBorder(
                         borderRadius: BorderRadius.circular(12),
-                        borderSide: BorderSide(color: Colors.black),
+                        borderSide: BorderSide(color: Colors.grey),
                       ),
                       focusedBorder: OutlineInputBorder(
                         borderRadius: BorderRadius.circular(12),
-                        borderSide: BorderSide(color: Colors.black, width: 2),
+                        borderSide: BorderSide(color: Colors.grey, width: 2),
                       ),
                       errorBorder: OutlineInputBorder(
                         borderRadius: BorderRadius.circular(12),
-                        borderSide: BorderSide(color: Colors.black),
+                        borderSide: BorderSide(color: Colors.red),
                       ),
                       focusedErrorBorder: OutlineInputBorder(
                         borderRadius: BorderRadius.circular(12),
-                        borderSide: BorderSide(color: Colors.black, width: 2),
+                        borderSide: BorderSide(color: Colors.red, width: 2),
                       ),
                       suffixIcon: IconButton(
                         icon: Icon(
                           _showPassword ? Icons.visibility : Icons.visibility_off,
-                          color: Colors.black,
+                          color: Colors.grey,
                         ),
                         onPressed: () =>
                             setState(() => _showPassword = !_showPassword),
                       ),
                     ),
-                    validator: (value) => value == null || value.length < 8
-                        ? 'Minimum 8 characters'
-                        : null,
+                    validator: (value) {
+                      if (value == null || value.isEmpty) {
+                        return 'Enter valid password';
+                      } else if (value.length > 8) {
+                        return 'Maximum 8 characters';
+                      }
+                      return null;
+                    },
                   ),
+
                   SizedBox(height: 24),
+
+                  // Login/Register Button
                   SizedBox(
                     width: double.infinity,
                     height: 48,
                     child: ElevatedButton(
                       onPressed: _isLoading ? null : _authenticate,
                       child: _isLoading
-                          ? CircularProgressIndicator(
-                        color: Colors.white,
-                      )
+                          ? CircularProgressIndicator(color: Colors.white)
                           : Text(
                         _isLogin ? 'Login' : 'Register',
-                        style: TextStyle(
-                          fontSize: 16,
-                          color: Colors.white,
-                        ),
+                        style: TextStyle(fontSize: 16, color: Colors.white),
                       ),
                       style: ElevatedButton.styleFrom(
                         shape: RoundedRectangleBorder(
                           borderRadius: BorderRadius.circular(12),
                         ),
                         elevation: 4,
-                        backgroundColor: Colors.blue,
+                        backgroundColor: Colors.blue[400],
                       ),
                     ),
                   ),
+
                   SizedBox(height: 12),
-                  TextButton(
-                    onPressed: () => setState(() => _isLogin = !_isLogin),
-                    child: Text(
-                      _isLogin
-                          ? 'Need an account? Register'
-                          : 'Already have an account? Login',
-                      style: TextStyle(color: Colors.blue.shade700),
+
+                  // Register Redirect
+                  RichText(
+                    text: TextSpan(
+                      text: 'Need an account? ',
+                      style: const TextStyle(color: Colors.black, fontSize: 20),
+                      children: [
+                        TextSpan(
+                          text: 'Register',
+                          style: TextStyle(
+                            color: Colors.blue,
+                            fontWeight: FontWeight.w500,
+                          ),
+                          recognizer: TapGestureRecognizer()
+                            ..onTap = () {
+                              Navigator.push(
+                                context,
+                                MaterialPageRoute(builder: (context) => const RegisterPage()),
+                              );
+                            },
+                        ),
+                      ],
                     ),
                   ),
                 ],
+
               ),
             ),
           ),

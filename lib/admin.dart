@@ -1,7 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:url_launcher/url_launcher.dart';
-import 'submission.dart'; // Your SubmissionTile widget
+import 'submission.dart';
+import 'SubmissionHistory.dart';// Your SubmissionTile widget
 
 class AdminScreen extends StatefulWidget {
   @override
@@ -18,7 +19,7 @@ class _AdminScreenState extends State<AdminScreen> {
       await launchUrl(Uri.parse(url), mode: LaunchMode.externalApplication);
     } else {
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Could not launch WhatsApp')),
+        SnackBar(content: Text('sending message')),
       );
     }
   }
@@ -49,47 +50,56 @@ class _AdminScreenState extends State<AdminScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(
-        leading: IconButton(
-          icon: Icon(Icons.arrow_back,color: Colors.white),
-          onPressed: () {
-            // Navigate to login page (replace '/login' with your route)
-            Navigator.pushReplacementNamed(context, '/login');
-          },
-        ),
-        title: Text('Admin Dashboard',
+        appBar: AppBar(
+          leading: IconButton(
+            icon: Icon(Icons.arrow_back, color: Colors.white,size: 28,),
+            onPressed: () {
+              Navigator.pushReplacementNamed(context, '/login');
+            },
+          ),
+          title: Text(
+            'Admin Dashboard',
             style: TextStyle(color: Colors.white),
-      ),
-      centerTitle: true,
-      backgroundColor: Colors.blue,
-    ),
+          ),
+          centerTitle: true,
+          backgroundColor: Colors.blue,
+          actions: [
+            IconButton(
+              icon: Icon(Icons.history, color: Colors.white),
+              tooltip: 'View History',
+              onPressed: () {
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(builder: (_) => SubmissionHistoryScreen()),
+                );
+              },
+            )
+          ],
+        ),
 
       body: StreamBuilder<QuerySnapshot>(
-        stream: FirebaseFirestore.instance.collection('submissions').snapshots(),
+        stream: FirebaseFirestore.instance
+            .collection('submissions')
+            .where('status', isEqualTo: 'pending')
+            .snapshots(),
         builder: (context, snapshot) {
-          if (snapshot.connectionState == ConnectionState.waiting) {
-            return Center(child: CircularProgressIndicator());
-          }
-
-          if (!snapshot.hasData || snapshot.data!.docs.isEmpty) {
-            return Center(child: Text('No submissions available.'));
-          }
-
+          if (!snapshot.hasData) return CircularProgressIndicator();
           return ListView(
             children: snapshot.data!.docs.map((doc) {
-              final data = doc.data()! as Map<String, dynamic>;
+              final data = doc.data() as Map<String, dynamic>;
               return SubmissionTile(
                 docId: doc.id,
+                username: data['username'] ?? 'unknown',
                 content: data['content'] ?? '',
                 status: data['status'] ?? 'pending',
-                onAccept: () => _acceptSubmission(doc.id, data['content'] ?? ''),
+                onAccept: () => _acceptSubmission(doc.id, data['content']),
                 onReject: () => _rejectSubmission(doc.id),
                 onDelete: () => _deleteSubmission(doc.id),
               );
             }).toList(),
           );
         },
-      ),
+      )
     );
   }
 }

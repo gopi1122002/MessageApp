@@ -46,7 +46,8 @@ class _AdminLoginScreenState extends State<AdminLoginScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: Text("Admin Login")),
+       appBar: AppBar(title: Text("Admin Login"),
+      ),
       body: Padding(
         padding: const EdgeInsets.all(16),
         child: Form(
@@ -64,7 +65,7 @@ class _AdminLoginScreenState extends State<AdminLoginScreen> {
                 decoration: InputDecoration(labelText: 'Password'),
                 obscureText: true,
                 validator: (value) =>
-                value!.length < 6 ? 'Min 6 characters' : null,
+                value!.length < 8 ? 'Min 6 characters' : null,
               ),
               SizedBox(height: 24),
               ElevatedButton(

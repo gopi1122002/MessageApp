@@ -59,4 +59,5 @@ class DefaultFirebaseOptions {
     projectId: 'useradmin-dcc9a',
     storageBucket: 'useradmin-dcc9a.firebasestorage.app',
   );
+
 }
